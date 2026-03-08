@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Curve Explorer</title>
+    <style>
+        body { background: #0a0e17; color: #c9d8e8; font-family: monospace; padding: 32px; }
+        h1 { color: #00d4ff; }
+        h2 { color: #00d4ff; margin-top: 32px; }
+        canvas { display: block; background: #111827; border: 1px solid #1e3a5f; margin-top: 8px; }
+        p { color: #4a6480; margin-top: 8px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<h1>Curve Explorer</h1>
+
+<h2>quadraticCurveTo — 1 control point</h2>
+<canvas id="qCanvas" width="400" height="300"></canvas>
+<p id="qCode"></p>
+
+<h2>bezierCurveTo — 2 control points</h2>
+<canvas id="bCanvas" width="400" height="300"></canvas>
+<p id="bCode"></p>
+
+<script>
+
+// ── QUADRATIC ──────────────────────────────────────────────────────
+
+const qCanvas = document.getElementById('qCanvas');
+const qCtx = qCanvas.getContext('2d');
+
+// The three points: start, one control point, end
+let qStart = { x: 60,  y: 240 };
+let qCP    = { x: 200, y: 40  };
+let qEnd   = { x: 340, y: 240 };
+
+let qDragging = null;
+
+function drawQuad() {
+    qCtx.clearRect(0, 0, 400, 300);
+
+    // Draw dashed line from start → control point → end
+    qCtx.strokeStyle = '#ffd700';
+    qCtx.lineWidth = 1;
+    qCtx.setLineDash([5, 5]);
+    qCtx.beginPath();
+    qCtx.moveTo(qStart.x, qStart.y);
+    qCtx.lineTo(qCP.x, qCP.y);
+    qCtx.lineTo(qEnd.x, qEnd.y);
+    qCtx.stroke();
+    qCtx.setLineDash([]);
+
+    // Draw the curve
+    qCtx.strokeStyle = '#00d4ff';
+    qCtx.lineWidth = 2;
+    qCtx.beginPath();
+    qCtx.moveTo(qStart.x, qStart.y);
+    qCtx.quadraticCurveTo(qCP.x, qCP.y, qEnd.x, qEnd.y);
+    qCtx.stroke();
+
+    // Draw the points as circles
+    qCtx.fillStyle = '#ffffff';
+    qCtx.beginPath();
+    qCtx.arc(qStart.x, qStart.y, 7, 0, Math.PI * 2);
+    qCtx.fill();
+
+    qCtx.fillStyle = '#ffffff';
+    qCtx.beginPath();
+    qCtx.arc(qEnd.x, qEnd.y, 7, 0, Math.PI * 2);
+    qCtx.fill();
+
+    qCtx.fillStyle = '#ff6b6b';
+    qCtx.beginPath();
+    qCtx.arc(qCP.x, qCP.y, 7, 0, Math.PI * 2);
+    qCtx.fill();
+
+    // Show the code
+    document.getElementById('qCode').textContent =
+        `quadraticCurveTo(${Math.round(qCP.x)}, ${Math.round(qCP.y)},  ${Math.round(qEnd.x)}, ${Math.round(qEnd.y)})`;
+}
+
+qCanvas.addEventListener('mousedown', function(e) {
+    const rect = qCanvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Check which point was clicked
+    if (Math.abs(mouseX - qCP.x) < 12 && Math.abs(mouseY - qCP.y) < 12) {
+        qDragging = 'cp';
+    } else if (Math.abs(mouseX - qStart.x) < 12 && Math.abs(mouseY - qStart.y) < 12) {
+        qDragging = 'start';
+    } else if (Math.abs(mouseX - qEnd.x) < 12 && Math.abs(mouseY - qEnd.y) < 12) {
+        qDragging = 'end';
+    }
+});
+
+qCanvas.addEventListener('mousemove', function(e) {
+    if (qDragging === null) return;
+    const rect = qCanvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (qDragging === 'cp')    { qCP.x    = mouseX; qCP.y    = mouseY; }
+    if (qDragging === 'start') { qStart.x = mouseX; qStart.y = mouseY; }
+    if (qDragging === 'end')   { qEnd.x   = mouseX; qEnd.y   = mouseY; }
+
+    drawQuad();
+});
+
+qCanvas.addEventListener('mouseup', function() { qDragging = null; });
+
+
+// ── BEZIER ────────────────────────────────────────────────────────
+
+const bCanvas = document.getElementById('bCanvas');
+const bCtx = bCanvas.getContext('2d');
+
+// Four points: start, two control points, end
+let bStart = { x: 60,  y: 240 };
+let bCP1   = { x: 100, y: 40  };
+let bCP2   = { x: 300, y: 40  };
+let bEnd   = { x: 340, y: 240 };
+
+let bDragging = null;
+
+function drawBez() {
+    bCtx.clearRect(0, 0, 400, 300);
+
+    // Dashed line: start → cp1
+    bCtx.strokeStyle = '#ff6b6b';
+    bCtx.lineWidth = 1;
+    bCtx.setLineDash([5, 5]);
+    bCtx.beginPath();
+    bCtx.moveTo(bStart.x, bStart.y);
+    bCtx.lineTo(bCP1.x, bCP1.y);
+    bCtx.stroke();
+
+    // Dashed line: end → cp2
+    bCtx.strokeStyle = '#ff9f43';
+    bCtx.beginPath();
+    bCtx.moveTo(bEnd.x, bEnd.y);
+    bCtx.lineTo(bCP2.x, bCP2.y);
+    bCtx.stroke();
+    bCtx.setLineDash([]);
+
+    // Draw the curve
+    bCtx.strokeStyle = '#00d4ff';
+    bCtx.lineWidth = 2;
+    bCtx.beginPath();
+    bCtx.moveTo(bStart.x, bStart.y);
+    bCtx.bezierCurveTo(bCP1.x, bCP1.y, bCP2.x, bCP2.y, bEnd.x, bEnd.y);
+    bCtx.stroke();
+
+    // Draw the points
+    bCtx.fillStyle = '#ffffff';
+    bCtx.beginPath();
+    bCtx.arc(bStart.x, bStart.y, 7, 0, Math.PI * 2);
+    bCtx.fill();
+
+    bCtx.fillStyle = '#ffffff';
+    bCtx.beginPath();
+    bCtx.arc(bEnd.x, bEnd.y, 7, 0, Math.PI * 2);
+    bCtx.fill();
+
+    bCtx.fillStyle = '#ff6b6b';
+    bCtx.beginPath();
+    bCtx.arc(bCP1.x, bCP1.y, 7, 0, Math.PI * 2);
+    bCtx.fill();
+
+    bCtx.fillStyle = '#ff9f43';
+    bCtx.beginPath();
+    bCtx.arc(bCP2.x, bCP2.y, 7, 0, Math.PI * 2);
+    bCtx.fill();
+
+    // Show the code
+    document.getElementById('bCode').textContent =
+        `bezierCurveTo(${Math.round(bCP1.x)}, ${Math.round(bCP1.y)},  ${Math.round(bCP2.x)}, ${Math.round(bCP2.y)},  ${Math.round(bEnd.x)}, ${Math.round(bEnd.y)})`;
+}
+
+bCanvas.addEventListener('mousedown', function(e) {
+    const rect = bCanvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (Math.abs(mouseX - bCP1.x) < 12 && Math.abs(mouseY - bCP1.y) < 12) {
+        bDragging = 'cp1';
+    } else if (Math.abs(mouseX - bCP2.x) < 12 && Math.abs(mouseY - bCP2.y) < 12) {
+        bDragging = 'cp2';
+    } else if (Math.abs(mouseX - bStart.x) < 12 && Math.abs(mouseY - bStart.y) < 12) {
+        bDragging = 'start';
+    } else if (Math.abs(mouseX - bEnd.x) < 12 && Math.abs(mouseY - bEnd.y) < 12) {
+        bDragging = 'end';
+    }
+});
+
+bCanvas.addEventListener('mousemove', function(e) {
+    if (bDragging === null) return;
+    const rect = bCanvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (bDragging === 'cp1')   { bCP1.x   = mouseX; bCP1.y   = mouseY; }
+    if (bDragging === 'cp2')   { bCP2.x   = mouseX; bCP2.y   = mouseY; }
+    if (bDragging === 'start') { bStart.x = mouseX; bStart.y = mouseY; }
+    if (bDragging === 'end')   { bEnd.x   = mouseX; bEnd.y   = mouseY; }
+
+    drawBez();
+});
+
+bCanvas.addEventListener('mouseup', function() { bDragging = null; });
+
+
+// Draw both on load
+drawQuad();
+drawBez();
+
+</script>
+</body>
+</html>
