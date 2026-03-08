@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bezier Explainer</title>
+    <style>
+        body { background: #0a0e17; color: #c9d8e8; font-family: monospace; padding: 32px; }
+        h2 { color: #00d4ff; margin-bottom: 8px; }
+        p  { color: #4a6480; margin-bottom: 16px; font-size: 0.85rem; }
+        canvas { display: block; background: #111827; border: 1px solid #1e3a5f; }
+        #code { color: #00ff99; margin-top: 16px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<h2>AND Gate — Bezier Dome</h2>
+<p>Drag the red and orange dots to see how the control points affect the dome</p>
+<canvas id="andGate" width="400" height="200"></canvas>
+<p id="code"></p>
+
+<script>
+
+const canvas = document.getElementById('andGate');
+const ctx = canvas.getContext('2d');
+
+// the four corners of the gate body (fixed)
+const topLeft     = { x: 80,  y: 20 };
+const bottomLeft  = { x: 80,  y: 180 };
+const bottomRight = { x: 190, y: 180 };
+const topRight    = { x: 190, y: 20 };
+
+// the two control points (draggable)
+let cp1 = { x: 280, y: 180 };  // pulls the bottom of the dome
+let cp2 = { x: 280, y: 20 };   // pulls the top of the dome
+
+let dragging = null;
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 2;
+
+    // dashed line from bottomRight to cp1
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(bottomRight.x, bottomRight.y);
+    ctx.lineTo(cp1.x, cp1.y);
+    ctx.stroke();
+
+    // dashed line from topRight to cp2
+    ctx.strokeStyle = '#ff9f43';
+    ctx.beginPath();
+    ctx.moveTo(topRight.x, topRight.y);
+    ctx.lineTo(cp2.x, cp2.y);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // gate body — flat back, bottom, dome, top
+    ctx.strokeStyle = '#00d4ff';
+    ctx.beginPath();
+    ctx.moveTo(topLeft.x, topLeft.y);
+    ctx.lineTo(bottomLeft.x, bottomLeft.y);   // flat back
+    ctx.lineTo(bottomRight.x, bottomRight.y); // bottom flat
+    ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, topRight.x, topRight.y); // dome
+    ctx.lineTo(topLeft.x, topLeft.y);         // top flat
+    ctx.stroke();
+
+    // wires
+    ctx.beginPath();
+    ctx.moveTo(0, 60);   ctx.lineTo(80, 60);   // input A
+    ctx.moveTo(0, 140);  ctx.lineTo(80, 140);  // input B
+    ctx.moveTo(topRight.x + (cp2.x > topRight.x ? 0 : 0), 100);
+    ctx.stroke();
+
+    // draw cp1 (red)
+    ctx.fillStyle = '#ff6b6b';
+    ctx.beginPath();
+    ctx.arc(cp1.x, cp1.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('cx1, cy1', cp1.x + 12, cp1.y + 4);
+
+    // draw cp2 (orange)
+    ctx.fillStyle = '#ff9f43';
+    ctx.beginPath();
+    ctx.arc(cp2.x, cp2.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('cx2, cy2', cp2.x + 12, cp2.y + 4);
+
+    // update code display
+    document.getElementById('code').textContent =
+        `bezierCurveTo(${Math.round(cp1.x)}, ${Math.round(cp1.y)},  ${Math.round(cp2.x)}, ${Math.round(cp2.y)},  ${topRight.x}, ${topRight.y})`;
+}
+
+canvas.addEventListener('mousedown', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (Math.abs(mouseX - cp1.x) < 12 && Math.abs(mouseY - cp1.y) < 12) {
+        dragging = 'cp1';
+    } else if (Math.abs(mouseX - cp2.x) < 12 && Math.abs(mouseY - cp2.y) < 12) {
+        dragging = 'cp2';
+    }
+});
+
+canvas.addEventListener('mousemove', function(e) {
+    if (dragging === null) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (dragging === 'cp1') { cp1.x = mouseX; cp1.y = mouseY; }
+    if (dragging === 'cp2') { cp2.x = mouseX; cp2.y = mouseY; }
+
+    draw();
+});
+
+canvas.addEventListener('mouseup', function() { dragging = null; });
+
+draw();
+
+</script>
+</body>
+</html>
