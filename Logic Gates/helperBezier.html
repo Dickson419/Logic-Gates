@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OR Gate Grid</title>
+    <style>
+        body { background: #0a0e17; color: #c9d8e8; font-family: monospace; padding: 32px; }
+        h2 { color: #00d4ff; margin-bottom: 8px; }
+        p  { color: #4a6480; font-size: 0.85rem; margin-bottom: 16px; }
+        canvas { display: block; background: #111827; border: 1px solid #1e3a5f; }
+        .legend { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+        .legend-item { display: flex; align-items: center; gap: 10px; }
+        .swatch { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+<h2>OR Gate — Canvas Grid</h2>
+<p>Grid lines every 20px. Drag the coloured control points.</p>
+<canvas id="orGate" width="500" height="300"></canvas>
+
+<div class="legend">
+    <div class="legend-item"><div class="swatch" style="background:#ffffff"></div> Fixed points (start / end of each curve)</div>
+    <div class="legend-item"><div class="swatch" style="background:#ff6b6b"></div> Curved back edge control points</div>
+    <div class="legend-item"><div class="swatch" style="background:#ff9f43"></div> Top curve control points</div>
+    <div class="legend-item"><div class="swatch" style="background:#a29bfe"></div> Bottom curve control points</div>
+</div>
+
+<script>
+
+const canvas = document.getElementById('orGate');
+const ctx = canvas.getContext('2d');
+
+const topBack    = { x: 80,  y: 30  };
+const bottomBack = { x: 80,  y: 150 };
+const point      = { x: 220, y: 90  };
+
+let cp1 = { x: 120, y: 30  };
+let cp2 = { x: 120, y: 150 };
+let cp3 = { x: 120, y: 30  };
+let cp4 = { x: 220, y: 55  };
+let cp5 = { x: 220, y: 125 };
+let cp6 = { x: 120, y: 150 };
+
+const allCPs = { cp1, cp2, cp3, cp4, cp5, cp6 };
+let dragging = null;
+
+function drawGrid() {
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= canvas.width; x += 20) {
+        ctx.strokeStyle = x % 100 === 0 ? '#243040' : '#1a2535';
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += 20) {
+        ctx.strokeStyle = y % 100 === 0 ? '#243040' : '#1a2535';
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+    ctx.fillStyle = '#2e4a62';
+    ctx.font = '10px monospace';
+    for (let x = 40; x < canvas.width; x += 40) {
+        ctx.fillText(x, x - 8, 12);
+    }
+    for (let y = 40; y < canvas.height; y += 40) {
+        ctx.fillText(y, 4, y + 4);
+    }
+}
+
+function drawDash(x1, y1, x2, y2, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+}
+
+function drawLabel(text, x, y, color) {
+    ctx.font = '11px monospace';
+    const w = ctx.measureText(text).width + 8;
+    const lx = (x + 20 + w > canvas.width) ? x - w - 12 : x + 16;
+    const ly = y + 4;
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(lx - 2, ly - 13, w, 16);
+    ctx.fillStyle = color;
+    ctx.fillText(text, lx, ly);
+}
+
+function drawCP(cp, color, label) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cp.x, cp.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    drawLabel(`${label} (${Math.round(cp.x)},${Math.round(cp.y)})`, cp.x, cp.y, color);
+}
+
+function drawFixedPoint(x, y, label) {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    drawLabel(`(${x},${y}) ${label}`, x, y, '#ffffff');
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
+
+    drawDash(topBack.x,    topBack.y,    cp1.x, cp1.y, '#ff6b6b');
+    drawDash(bottomBack.x, bottomBack.y, cp2.x, cp2.y, '#ff6b6b');
+    drawDash(topBack.x,    topBack.y,    cp3.x, cp3.y, '#ff9f43');
+    drawDash(point.x,      point.y,      cp4.x, cp4.y, '#ff9f43');
+    drawDash(point.x,      point.y,      cp5.x, cp5.y, '#a29bfe');
+    drawDash(bottomBack.x, bottomBack.y, cp6.x, cp6.y, '#a29bfe');
+
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 2.5;
+
+    ctx.beginPath();
+    ctx.moveTo(topBack.x, topBack.y);
+    ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, bottomBack.x, bottomBack.y);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(topBack.x, topBack.y);
+    ctx.bezierCurveTo(cp3.x, cp3.y, cp4.x, cp4.y, point.x, point.y);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+    ctx.bezierCurveTo(cp5.x, cp5.y, cp6.x, cp6.y, bottomBack.x, bottomBack.y);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0,   50);  ctx.lineTo(80,  50);
+    ctx.moveTo(0,   130); ctx.lineTo(80,  130);
+    ctx.moveTo(220, 90);  ctx.lineTo(300, 90);
+    ctx.stroke();
+
+    drawFixedPoint(topBack.x,    topBack.y,    'top');
+    drawFixedPoint(bottomBack.x, bottomBack.y, 'bottom');
+    drawFixedPoint(point.x,      point.y,      'point');
+
+    drawCP(cp1, '#ff6b6b', 'cp1');
+    drawCP(cp2, '#ff6b6b', 'cp2');
+    drawCP(cp3, '#ff9f43', 'cp3');
+    drawCP(cp4, '#ff9f43', 'cp4');
+    drawCP(cp5, '#a29bfe', 'cp5');
+    drawCP(cp6, '#a29bfe', 'cp6');
+}
+
+canvas.addEventListener('mousedown', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    for (const [name, cp] of Object.entries(allCPs)) {
+        if (Math.abs(mx - cp.x) < 14 && Math.abs(my - cp.y) < 14) {
+            dragging = name;
+        }
+    }
+});
+
+canvas.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    allCPs[dragging].x = e.clientX - rect.left;
+    allCPs[dragging].y = e.clientY - rect.top;
+    draw();
+});
+
+canvas.addEventListener('mouseup',    function() { dragging = null; });
+canvas.addEventListener('mouseleave', function() { dragging = null; });
+
+draw();
+
+</script>
+</body>
+</html>
